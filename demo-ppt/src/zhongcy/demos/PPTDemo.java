@@ -1,19 +1,22 @@
 package zhongcy.demos;
 
-import javafx.scene.control.Slider;
 import org.apache.poi.ooxml.POIXMLDocumentPart;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.sl.usermodel.SlideShow;
 import org.apache.poi.sl.usermodel.SlideShowFactory;
 import org.apache.poi.xslf.usermodel.XSLFChart;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.openxmlformats.schemas.drawingml.x2006.chart.*;
 
-import java.awt.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,36 +41,48 @@ public class PPTDemo {
                             // 查看里面的图表数据，才能知道是什么图表
                             CTPlotArea plot = chart.getCTChart().getPlotArea();
 
+                            // 测试数据
+                            List<SeriesData> seriesDatas = Arrays.asList(
+                                    new SeriesData("", Arrays.asList(
+                                            new NameDouble("行1", Math.random() * 100),
+                                            new NameDouble("行2", Math.random() * 100),
+                                            new NameDouble("行3", Math.random() * 100),
+                                            new NameDouble("行4", Math.random() * 100),
+                                            new NameDouble("行5", Math.random() * 100)
+                                    )),
+                                    new SeriesData("", Arrays.asList(
+                                            new NameDouble("行1", Math.random() * 100),
+                                            new NameDouble("行2", Math.random() * 100),
+                                            new NameDouble("行3", Math.random() * 100),
+                                            new NameDouble("行4", Math.random() * 100),
+                                            new NameDouble("行5", Math.random() * 100)
+                                    ))
+                            );
+                            XSSFWorkbook workbook = chart.getWorkbook();
+                            XSSFSheet sheet = workbook.getSheetAt(0);
+
+
                             // 柱状图
                             if (!plot.getBarChartList().isEmpty()) {
                                 CTBarChart barChart = plot.getBarChartArray(0);
-
+                                updateChartExcelV(seriesDatas, workbook, sheet);
 
                                 int i = 0;
                                 for (CTBarSer ser : barChart.getSerList()) {
-                                    SeriesData data = new SeriesData("", new ArrayList<>());
-                                    data.value.add(new NameDouble("行1", 2+i));
-                                    data.value.add(new NameDouble("行2", 3+i));
-                                    data.value.add(new NameDouble("行3", 4+i));
-                                    data.value.add(new NameDouble("行4", 5+i));
-                                    data.value.add(new NameDouble("行5", 6+i));
-                                    updateChartCatAndNum(data, ser.getTx(), ser.getCat(), ser.getVal());
+                                    updateChartCatAndNum(seriesDatas.get(i), ser.getTx(), ser.getCat(), ser.getVal());
                                     ++i;
                                 }
                             }
 
                             // 饼图
                             else if (!plot.getPieChartList().isEmpty()) {
+                                // 示例饼图只有一列数据
+                                updateChartExcelV(Arrays.asList(seriesDatas.get(0)), workbook, sheet);
+
                                 CTPieChart pieChart = plot.getPieChartArray(0);
                                 int i = 0;
                                 for (CTPieSer ser : pieChart.getSerList()) {
-                                    SeriesData data = new SeriesData("", new ArrayList<>());
-                                    data.value.add(new NameDouble("行1", 2+i));
-                                    data.value.add(new NameDouble("行2", 3+i));
-                                    data.value.add(new NameDouble("行3", 4+i));
-                                    data.value.add(new NameDouble("行4", 5+i));
-                                    data.value.add(new NameDouble("行5", 6+i));
-                                    updateChartCatAndNum(data, ser.getTx(), ser.getCat(), ser.getVal());
+                                    updateChartCatAndNum(seriesDatas.get(i), ser.getTx(), ser.getCat(), ser.getVal());
                                     ++i;
                                 }
                             }
@@ -89,6 +104,51 @@ public class PPTDemo {
 
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (InvalidFormatException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 更新图表的关联 excel， 值是纵向的
+     *
+     * @param param
+     * @param workbook
+     * @param sheet
+     */
+    protected void updateChartExcelV(List<SeriesData> seriesDatas, XSSFWorkbook workbook, XSSFSheet sheet) {
+        XSSFRow title = sheet.getRow(0);
+        for (int i = 0; i < seriesDatas.size(); i++) {
+            SeriesData data = seriesDatas.get(i);
+            if (data.name != null && !data.name.isEmpty()) {
+                // 系列名称，不能修改，修改后无法打开 excel
+                //                title.getCell(i + 1).setCellValue(data.name);
+            }
+            int size = data.value.size();
+            for (int j = 0; j < size; j++) {
+                XSSFRow row = sheet.getRow(j + 1);
+                if (row == null) {
+                    row = sheet.createRow(j + 1);
+                }
+                NameDouble cellValu = data.value.get(j);
+                XSSFCell cell = row.getCell(0);
+                if (cell == null) {
+                    cell = row.createCell(0);
+                }
+                cell.setCellValue(cellValu.name);
+
+                cell = row.getCell(i + 1);
+                if (cell == null) {
+                    cell = row.createCell(i + 1);
+                }
+                cell.setCellValue(cellValu.value);
+            }
+            int lastRowNum = sheet.getLastRowNum();
+            if (lastRowNum > size) {
+                for (int idx = lastRowNum; idx > size; idx--) {
+                    sheet.removeRow(sheet.getRow(idx));
+                }
+            }
         }
     }
 
