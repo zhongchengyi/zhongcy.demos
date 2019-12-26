@@ -66,6 +66,7 @@ public class PPTDemo {
                             if (!plot.getBarChartList().isEmpty()) {
                                 CTBarChart barChart = plot.getBarChartArray(0);
                                 updateChartExcelV(seriesDatas, workbook, sheet);
+                                workbook.write(chart.getPackagePart().getOutputStream());
 
                                 int i = 0;
                                 for (CTBarSer ser : barChart.getSerList()) {
@@ -78,6 +79,7 @@ public class PPTDemo {
                             else if (!plot.getPieChartList().isEmpty()) {
                                 // 示例饼图只有一列数据
                                 updateChartExcelV(Arrays.asList(seriesDatas.get(0)), workbook, sheet);
+                                workbook.write(chart.getPackagePart().getOutputStream());
 
                                 CTPieChart pieChart = plot.getPieChartArray(0);
                                 int i = 0;
